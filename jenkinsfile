@@ -6,6 +6,11 @@ pipeline {
         maven 'maven9'
     }
 
+    triggers {
+        // Poll SCM every 1 minute (cron syntax)
+        pollSCM('H/1 * * * *')
+    }
+
     stages {
 
         stage("Cleanup Workspace") {
@@ -16,7 +21,9 @@ pipeline {
 
         stage("Checkout from SCM") {
             steps {
-                git branch: 'main', credentialId: 'github', url: 'https://github.com/kunalpatil99/registration-app.git'
+                git branch: 'main', 
+                    credentialId: 'github', 
+                    url: 'https://github.com/kunalpatil99/registration-app.git'
             }
         }
 
