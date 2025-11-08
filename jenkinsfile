@@ -7,25 +7,15 @@ pipeline {
     }
 
     environment {
-        // App Info
         APP_NAME = "registration-app"
         RELEASE = "1.0.0"
-        BUILD_VERSION = "${RELEASE}-${BUILD_NUMBER}"
-
-        // Docker Info
         DOCKER_USER = "kunalpatil99"
-        DOCKER_CREDENTIAL_ID = "dockerhub" // Jenkins credentials ID (Secret text or Username/Password)
+        DOCKER_CREDENTIAL_ID = "dockerhub"  // Jenkins credential ID (not password!)
         IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
-        IMAGE_TAG = "${BUILD_VERSION}"
-
-        // SonarQube
-        SONAR_CREDENTIAL_ID = "jenkins-sonarqube-token"
-        SONAR_PROJECT_KEY = "${APP_NAME}"
-        SONAR_HOST_URL = "http://<your-sonarqube-server>:9000"
+        IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
     }
 
     stages {
-
         stage('Cleanup Workspace') {
             steps {
                 cleanWs()
@@ -42,7 +32,7 @@ pipeline {
 
         stage('Build Application') {
             steps {
-                sh 'mvn clean package'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
@@ -55,11 +45,11 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    withSonarQubeEnv(credentialsId: "${SONAR_CREDENTIAL_ID}") {
+                    withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') {
                         sh """
                             mvn sonar:sonar \
-                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                            -Dsonar.host.url=${SONAR_HOST_URL}
+                            -Dsonar.projectKey=${APP_NAME} \
+                            -Dsonar.host.url=http://<your-sonarqube-server>:9000
                         """
                     }
                 }
@@ -79,10 +69,11 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
+                    // Login, build and push using Jenkins-managed Docker credentials
                     docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_CREDENTIAL_ID}") {
-                        def appImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-                        appImage.push()
-                        appImage.push('latest')
+                        def dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+                        dockerImage.push()
+                        dockerImage.push('latest')
                     }
                 }
             }
